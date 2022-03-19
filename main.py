@@ -83,7 +83,6 @@ class Player:
         self.move()
         for enemy_bullets in enemies:
             if self.hit(enemy_bullets[1], dead_bullets):
-                print('you lose lol')
                 return -1
         if self.shot:
             self.shoot(player_bullets)  
@@ -173,7 +172,7 @@ def handle_dead_bullets(dead_bullets: list[Bullets], screen):
         bullet.draw(screen, (255, 0, 0))
 
 
-def main(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
+def main(screen: pygame.display.set_mode, clock: pygame.time.Clock):
     timer = 0
 
     player_bullets = Bullets(6, 5, 28)
@@ -182,6 +181,11 @@ def main(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
     enemies = []
     dead_bullets = []
 
+    r_down = False
+    l_down = False
+    u_down = False
+    d_down = False
+
     font = pygame.font.SysFont('arial', 25)
 
     running = True
@@ -189,30 +193,45 @@ def main(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                pygame.quit()
+                raise SystemExit
             if event.type == pygame.KEYDOWN:
                 match event.key:
                     case pygame.K_RIGHT:
                         player.player_move[0] = 5
+                        r_down = True
                     case pygame.K_LEFT:
                         player.player_move[0] = -5
+                        l_down = True
                     case pygame.K_UP:
                         player.player_move[1] = -5
+                        u_down = True
                     case pygame.K_DOWN:
                         player.player_move[1] = 5
+                        d_down = True
                     case pygame.K_SPACE:
                         player.shot = True
             if event.type == pygame.KEYUP:
                 match event.key:
                     case pygame.K_LEFT:
                         player.player_move[0] = 0
+                        l_down = False
                     case pygame.K_RIGHT:
                         player.player_move[0] = 0
+                        r_down = False
                     case pygame.K_UP:
                         player.player_move[1] = 0
+                        u_down = False
                     case pygame.K_DOWN:
                         player.player_move[1] = 0
+                        d_down = False
                     case pygame.K_SPACE:
                         player.shot = False
+
+                if r_down: player.player_move[0] = 5
+                if l_down: player.player_move[0] = -5
+                if u_down: player.player_move[1] = -5
+                if d_down: player.player_move[1] = 5
 
         screen.fill((0, 0, 0))
 
@@ -234,13 +253,15 @@ def main(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
         pygame.display.update()
 
         clock.tick(60)
-    
-    print(f"Score: {player.points}")
+
+    return (running, player.points)
 
 
-def menu(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
+def menu(screen: pygame.display.set_mode, clock: pygame.time.Clock):
     running = True
     playing = False
+
+    code = 0
 
     title_font = pygame.font.SysFont('arial', 55)
     menu_font = pygame.font.SysFont('arial', 35)
@@ -256,33 +277,125 @@ def menu(screen: pygame.display.set_mode, clock: pygame.time.Clock()):
     htp_rect = htp.get_rect()
     htp_rect.topleft = (100, 450)
 
-    credits_ = menu_font.render('Credits', False, WHITE)
-    credits_rect = credits_.get_rect()
-    credits_rect.topleft = (100, 550)
-
     quit_ = menu_font.render('Quit', False, WHITE)
     quit_rect = quit_.get_rect()
-    quit_rect.topleft = (100, 650)
+    quit_rect.topleft = (100, 550)
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False 
+                running = False
+                code = 4
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_rect.collidepoint(pygame.mouse.get_pos()):
                     running = False
                     playing = True
+                    code = 1
+                if htp_rect.collidepoint(pygame.mouse.get_pos()):
+                    running = False
+                    code = 2
+                if quit_rect.collidepoint(pygame.mouse.get_pos()):
+                    running = False
+                    code = 3
 
-        screen.blit(title, (100, 100))
-        screen.blit(play, (100, 350))
-        screen.blit(htp, (100, 450))
-        screen.blit(credits_, (100, 550))
-        screen.blit(quit_, (100, 650))
+        screen.fill((0, 0, 0))
+
+        screen.blit(title, (100, 150))
+        screen.blit(play, play_rect.topleft)
+        screen.blit(htp, htp_rect.topleft)
+        screen.blit(quit_, quit_rect.topleft)
 
         pygame.display.update()
         clock.tick(60)
 
-    return True if playing else False
+    return code
+
+
+def htp_screen(screen: pygame.display.set_mode, clock: pygame.time.Clock):
+    running = True
+    code = 0
+
+    font = pygame.font.SysFont('arial', 30)
+
+    htp_text0 = font.render('Shoot the enemies to get a point, avoid the enemies bullet in order not to die',  True, (255, 255, 255))
+    htp_text1 = font.render('Arrow keys to move', True, (255, 255, 255))
+    htp_text2 = font.render('Spacebar to shoot', True, (255, 255, 255))
+
+    back = font.render('<- Back',  True, (255, 255, 255))
+    back_rect = back.get_rect()
+    back_rect.topleft = (80, 800)
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_rect.collidepoint(pygame.mouse.get_pos()):
+                    code = 1
+                    running = False
+
+        screen.fill((0, 0, 0))
+        
+        screen.blit(htp_text0, (35, 300))
+        screen.blit(htp_text1, (460, 400))
+        screen.blit(htp_text2, (470, 500))
+        screen.blit(back, (40, 800))
+
+        pygame.display.update()
+        clock.tick(60)
+    
+    return code
+
+
+def game_over(screen: pygame.display.set_mode, clock: pygame.time.Clock, points: int):
+    font = pygame.font.SysFont('arial', 50)
+    
+    text = font.render('Game Over!', True, (255, 255, 255))
+    score = font.render(f'Score: {points}', True, (255, 255, 255))
+    
+    again = font.render('Play again', True, (255, 255, 255))
+    again_rect = again.get_rect()
+    again_rect.topleft = (490, 420)
+
+    menu = font.render('Back to Menu', True, (255, 255, 255))
+    menu_rect = menu.get_rect()
+    menu_rect.topleft = (450, 520)
+
+    quit_ = font.render('Quit', True, (255, 255, 255))
+    quit_rect = quit_.get_rect()
+    quit_rect.topleft = (550, 620)
+
+    running = True
+    code = 0
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                code = 3
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if again_rect.collidepoint(pygame.mouse.get_pos()):
+                    running = False
+                    code = 1
+                if menu_rect.collidepoint(pygame.mouse.get_pos()):
+                    running = False
+                    code = 2
+                if quit_rect.collidepoint(pygame.mouse.get_pos()):
+                    running = False
+                    code = 3
+
+        screen.fill((0, 0, 0))
+
+        screen.blit(text, (480, 150))
+        screen.blit(score, (520, 220))
+        screen.blit(again, again_rect.topleft)
+        screen.blit(menu, menu_rect.topleft)
+        screen.blit(quit_, quit_rect.topleft)
+
+        pygame.display.update()
+        clock.tick(60)
+
+    return code
 
 
 if __name__ == '__main__':
@@ -291,6 +404,26 @@ if __name__ == '__main__':
     pygame.display.set_icon(pygame.image.load('assets/player.png'))
 
     clock = pygame.time.Clock()
+    
+    quit = False
 
-    if menu(screen, clock):
-        main(screen, clock)
+    while not quit:
+        match menu(screen, clock):
+            case 1:
+                running = True
+                while running:
+                    result = main(screen, clock)
+                    if result[0]:
+                        match game_over(screen, clock, result[1]):
+                            case 1:
+                                continue
+                            case 2:
+                                break
+                            case 3:
+                                running = False
+                                quit = True
+            case 2:
+                if not htp_screen(screen, clock):
+                    break
+            case 3:
+                quit = True
